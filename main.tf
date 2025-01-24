@@ -2,29 +2,29 @@ provider "aws" {
   region = "us-west-2"
 }
 
-resource "aws_launch_configuration" "example" {
-  name          = "example-launch-configuration"
-  image_id      = "ami-0c55b159cbfafe1f0" # Amazon Linux 2 AMI
+resource "aws_launch_template" "example" {
+  name_prefix   = "example-launch-template"
+  image_id      = "ami-00755a52896316cee"
   instance_type = "t2.micro"
 
-  lifecycle {
-    create_before_destroy = true
-  }
-
-  user_data = <<-EOF
+  user_data = base64encode(<<-EOF
               #!/bin/bash
               yum install -y nginx
               systemctl start nginx
               systemctl enable nginx
               EOF
+  )
 }
 
 resource "aws_autoscaling_group" "example" {
   desired_capacity     = 1
   max_size             = 2
   min_size             = 1
-  vpc_zone_identifier  = ["subnet-0123456789abcdef0"] # Replace with your subnet ID
-  launch_configuration = aws_launch_configuration.example.id
+  vpc_zone_identifier  = ["subnet-027c96c7967b8e580"] # Updated with private subnet ID
+  launch_template {
+    id      = aws_launch_template.example.id
+    version = "$Latest"
+  }
 
   tag {
     key                 = "Name"
@@ -34,7 +34,7 @@ resource "aws_autoscaling_group" "example" {
 }
 
 resource "aws_elb" "example" {
-  name               = "example-load-balancer"
+  name               = "example-load-balancer-new"
   availability_zones = ["us-west-2a", "us-west-2b"]
 
   listener {
@@ -51,6 +51,4 @@ resource "aws_elb" "example" {
     healthy_threshold   = 2
     unhealthy_threshold = 2
   }
-
-  instances = aws_autoscaling_group.example.instances
 }
